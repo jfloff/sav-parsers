@@ -1,0 +1,20 @@
+# Local machine / editor state
+.DS_Store
+.claude/
+.env
+credentials.json
+
+# Python environment / build artifacts
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Generated parser artifacts
+files/*.sample.pdf
+files/dataset/*
+!files/dataset/.keep
+files/processing/*
+!files/processing/.keep
