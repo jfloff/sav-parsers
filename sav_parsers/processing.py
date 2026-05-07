@@ -29,9 +29,12 @@ def start_processing(
   close_processing time, so the labeled doc gets staged even if the caller
   has nothing to add.
 
-  Returns the processing_id (uuid4 hex).
+  Returns the processing_id, formatted `YYYYMMDDTHHMMSS-<12-hex>` (UTC).
+  The timestamp prefix makes ids lexicographically chronological — useful
+  for `list_processing` ordering and at-a-glance debugging.
   """
-  processing_id = uuid.uuid4().hex[:16]
+  now = datetime.now(timezone.utc)
+  processing_id = f"{now.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:12]}"
   d = _processing_dir(processing_id)
   d.mkdir(parents=True, exist_ok=True)
 
@@ -44,7 +47,7 @@ def start_processing(
 
   meta = {
     "doc_type":         doc_type,
-    "created_at":       datetime.now(timezone.utc).isoformat(),
+    "created_at":       now.isoformat(),
     "auto_corrections": list(auto_corrections or []),
   }
   (d / "meta.json").write_text(json.dumps(meta, indent=2))
