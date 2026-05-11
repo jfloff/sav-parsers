@@ -43,6 +43,4 @@ def classify_and_parse(pdf_path: str | Path) -> tuple[DocType, dict | None]:
         or the DocType and None if no parser is found for the detected type.
     """
     doc_type = classify(pdf_path)
-    if doc_type == DocType.UNKNOWN:
-        return doc_type, None
     return doc_type, parse_document(pdf_path, doc_type)

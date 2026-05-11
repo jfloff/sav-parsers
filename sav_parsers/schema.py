@@ -13,30 +13,52 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from google.api_core.client_options import ClientOptions
-from google.cloud import documentai_v1beta3
+from google.cloud import documentai_v1beta3 as documentai
 
 from .document_ai import _processor_id_for, _required_env
 
 SCHEMA_DIR = Path("files/schemas")
+_CLASSIFIER_PROCESSOR_TYPE = "CUSTOM_CLASSIFICATION_PROCESSOR"
 
 
 def schema_path(doc_type: str) -> Path:
   return SCHEMA_DIR / f"{doc_type}.json"
 
 
-def fetch_schema(doc_type: str) -> list[str]:
+def _schema_processor_id_for(doc_type: str) -> str:
+  if doc_type == "classifier":
+    return _required_env("DOCAI_CLASSIFIER_PROCESSOR_ID")
+  return _processor_id_for(doc_type)
+
+
+def _processor_type(processor_id: str) -> str:
+  project_id = _required_env("DOCAI_PROJECT_ID")
+  location = _required_env("DOCAI_LOCATION")
+  client = documentai.DocumentProcessorServiceClient(
+    client_options=ClientOptions(
+      api_endpoint=f"{location}-documentai.googleapis.com",
+    ),
+  )
+  processor = client.get_processor(
+    name=f"projects/{project_id}/locations/{location}/processors/{processor_id}",
+  )
+  return processor.type_
+
+
+def fetch_schema(doc_type: str) -> dict[str, str | list[str]]:
   """Hit Document AI for the processor's dataset entity list.
 
-  We use DatasetServiceClient.get_dataset_schema (v1beta3) because Custom
-  Extractor processors expose their trained labels there. The v1
-  get_processor_version().document_schema only returns the base entity
-  ('custom_extraction_document_type') for CDE — useless for our purposes.
+  We use v1beta3 get_dataset_schema because Custom Extractor processors
+  expose their trained labels there. get_processor_version().document_schema
+  only returns the base entity ('custom_extraction_document_type') for CDE —
+  useless for our purposes.
   """
-  project_id   = _required_env("DOCAI_PROJECT_ID")
-  location     = _required_env("DOCAI_LOCATION")
-  processor_id = _processor_id_for(doc_type)
+  project_id = _required_env("DOCAI_PROJECT_ID")
+  location = _required_env("DOCAI_LOCATION")
+  processor_id = _schema_processor_id_for(doc_type)
+  processor_type = _processor_type(processor_id)
 
-  client = documentai_v1beta3.DocumentServiceClient(
+  client = documentai.DocumentServiceClient(
     client_options=ClientOptions(
       api_endpoint=f"{location}-documentai.googleapis.com",
     ),
@@ -44,22 +66,36 @@ def fetch_schema(doc_type: str) -> list[str]:
   schema = client.get_dataset_schema(
     name=f"projects/{project_id}/locations/{location}/processors/{processor_id}/dataset/datasetSchema",
   )
-  # Trained labels live as `properties` of the synthetic
-  # `custom_extraction_document_type` entity, not as top-level entity_types.
-  return sorted(
-    prop.name
-    for et in schema.document_schema.entity_types
-    for prop in et.properties
-  )
+  if processor_type == _CLASSIFIER_PROCESSOR_TYPE:
+    entities = sorted(et.name for et in schema.document_schema.entity_types)
+  else:
+    # Trained labels live as `properties` of the synthetic
+    # `custom_extraction_document_type` entity, not as top-level entity_types.
+    entities = sorted(
+      prop.name
+      for et in schema.document_schema.entity_types
+      for prop in et.properties
+    )
+  return {
+    "processor_type": processor_type,
+    "entities": entities,
+  }
 
 
-def save_schema(doc_type: str, entities: list[str]) -> Path:
+def save_schema(
+  doc_type: str,
+  entities: list[str],
+  *,
+  processor_type: str | None = None,
+) -> Path:
   SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
   payload = {
-    "doc_type":   doc_type,
+    "doc_type": doc_type,
     "fetched_at": datetime.now(timezone.utc).isoformat(),
-    "entities":   sorted(entities),
+    "entities": sorted(entities),
   }
+  if processor_type is not None:
+    payload["processor_type"] = processor_type
   path = schema_path(doc_type)
   path.write_text(json.dumps(payload, indent=2))
   return path

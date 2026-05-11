@@ -92,22 +92,29 @@ def cmd_gc(args) -> int:
 
 
 def cmd_schema(args) -> int:
-  new = sorted(fetch_schema(args.doc_type))
+  fetched = fetch_schema(args.doc_type)
+  new = sorted(fetched["entities"])
   if not args.save:
     _print_json({
-      "doc_type":     args.doc_type,
+      "doc_type": args.doc_type,
+      "processor_type": fetched["processor_type"],
       "entity_count": len(new),
-      "entities":     new,
+      "entities": new,
     })
     return 0
   existing = set(load_schema(args.doc_type))
-  path = save_schema(args.doc_type, new)
+  path = save_schema(
+    args.doc_type,
+    new,
+    processor_type=fetched["processor_type"],
+  )
   _print_json({
-    "doc_type":     args.doc_type,
-    "path":         str(path),
+    "doc_type": args.doc_type,
+    "path": str(path),
+    "processor_type": fetched["processor_type"],
     "entity_count": len(new),
-    "added":        sorted(set(new) - existing),
-    "removed":      sorted(existing - set(new)),
+    "added": sorted(set(new) - existing),
+    "removed": sorted(existing - set(new)),
   })
   return 0
 

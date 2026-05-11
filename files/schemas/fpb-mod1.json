@@ -1,6 +1,6 @@
 {
   "doc_type": "fpb-mod1",
-  "fetched_at": "2026-05-06T02:28:47.982790+00:00",
+  "fetched_at": "2026-05-11T09:10:08.471750+00:00",
   "entities": [
     "apolice_seguro",
     "assinatura_encarregado_presente",
@@ -62,5 +62,6 @@
     "tipo_seguro_fpb",
     "validade_doc",
     "validade_doc_encarregado"
-  ]
+  ],
+  "processor_type": "CUSTOM_EXTRACTION_PROCESSOR"
 }
