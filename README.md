@@ -60,6 +60,7 @@ persisted, since CDE retraining can't fix OCR-layer misreads.
 ```bash
 ./sav-parsers parse <pdf>                       # process a PDF, print fields
 ./sav-parsers classify <pdf>                    # returns DocType
+./sav-parsers classify --type <doc-type> <pdf>  # import labeled classifier training data
 ./sav-parsers list                              # pending processing sessions
 ./sav-parsers close <id> [--correction k=v]...  # finalize a session
 ./sav-parsers staged <doc-type>                 # labeled docs ready to upload
@@ -69,6 +70,7 @@ persisted, since CDE retraining can't fix OCR-layer misreads.
 
 `--correction` is repeatable; `k` is the entity name (e.g. `morada`), `v` is
 the user-confirmed truth.
+`classify --type` accepts any `DocType` value such as `fpb_modelo_1`.
 
 ## Filesystem
 

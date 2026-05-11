@@ -3,7 +3,7 @@
 
 Usage:
   ./sav-parsers parse <pdf>
-  ./sav-parsers classify <pdf>
+  ./sav-parsers classify [--type doc-type] <pdf>
   ./sav-parsers close <processing_id> [--correction entity=value]...
   ./sav-parsers list
   ./sav-parsers staged <doc-type>
@@ -18,11 +18,13 @@ import sys
 from dataclasses import asdict
 
 from sav_parsers import (
+  DocType,
   classify,
   close_processing,
   gc_processing,
   list_processing,
   list_staged,
+  train_classifier,
 )
 from sav_parsers.parsers import classify_and_parse
 from sav_parsers.schema import fetch_schema, load_schema, save_schema
@@ -50,6 +52,14 @@ def cmd_parse(args) -> int:
 
 
 def cmd_classify(args) -> int:
+  if args.doc_type:
+    train_classifier(args.pdf, DocType(args.doc_type))
+    _print_json({
+      "trained":  True,
+      "doc_type": args.doc_type,
+      "pdf":      args.pdf,
+    })
+    return 0
   print(classify(args.pdf))
   return 0
 
@@ -127,7 +137,13 @@ def main() -> int:
   pp.add_argument("pdf")
   pp.set_defaults(func=cmd_parse)
 
-  pc = sub.add_parser("classify", help="Classify a PDF (returns doc_type)")
+  pc = sub.add_parser("classify", help="Classify a PDF or submit labeled training data")
+  pc.add_argument(
+    "--type",
+    dest="doc_type",
+    choices=[dt.value for dt in DocType],
+    help="If set, treat the PDF as labeled training data for this doc type.",
+  )
   pc.add_argument("pdf")
   pc.set_defaults(func=cmd_classify)
 

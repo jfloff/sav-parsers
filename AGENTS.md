@@ -22,12 +22,15 @@ for the user-facing flow.
 
 ```
 sav_parsers/
-  classify.py      # DocType StrEnum + stub classifier (always returns FPB_MOD1)
+  classify.py      # classifier inference + classifier-training import helper
   document_ai.py   # GCP DocAI client + processor lookup helpers
+  parsers.py       # classify_and_parse dispatcher + DocType -> parser routing
   fpb_mod1.py      # parse_fpb_mod1 + post-processing for mod 1 forms
+  fpb_mod4.py      # placeholder parser for mod 4
+  em.py            # placeholder parser for exame medico
   processing.py    # start/close/list/gc lifecycle (doc-type agnostic)
   schema.py        # fetch/load/save schema cache
-  types.py         # ParsedField dataclass
+  types.py         # DocType StrEnum + ParsedField dataclass
 cli.py             # argparse CLI wrapping the package
 sav-parsers        # bash wrapper that calls .venv/bin/python cli.py
 files/schemas/     # committed schema snapshots (entity lists per doc-type)
@@ -55,16 +58,23 @@ domain logic into this package.
 ### Add a doc-type (e.g. `fpb-mod4`)
 
 1. Add `DOCAI_FPB_MOD4_PROCESSOR_ID=...` to `.env`.
-2. Add `FPB_MOD4 = "fpb-mod4"` to `DocType` in `classify.py` (already there).
+2. Add `FPB_MOD4 = "fpb_modelo_4"` to `DocType` in `types.py` (already there).
 3. Create `sav_parsers/fpb_mod4.py` mirroring `fpb_mod1.py`: a
    `parse_fpb_mod4(pdf_path)` that processes via DocAI, applies
    doc-type-specific post-processing, calls `start_processing(...,
-   doc_type="fpb-mod4", auto_corrections=...)`, and returns
+   doc_type=DocType.FPB_MOD4.value, auto_corrections=...)`, and returns
    `{"processing_id", "fields"}`.
 4. Export `parse_fpb_mod4` from `sav_parsers/__init__.py`.
-5. `./sav-parsers schema fpb-mod4 --save` to seed the entity cache.
-6. Update the real `classify` function to actually distinguish doc types
-   (currently a stub).
+5. `./sav-parsers schema fpb_modelo_4 --save` to seed the entity cache.
+6. Update `sav_parsers/parsers.py` if the new doc-type should be parseable
+   via `classify_and_parse`.
+
+### Add classifier training data
+
+Use `./sav-parsers classify --type <doc-type> <pdf>`. This uploads the PDF
+to a temporary GCS staging location, imports it into the classifier dataset's
+training split with `document_type=<doc-type>`, then deletes the temp object
+after the import operation completes.
 
 ### Add a post-processor
 
@@ -87,8 +97,9 @@ displayed value — the labeled doc keeps the raw OCR characters.
 - Don't bypass the `start_processing` → `close_processing` lifecycle. Every
   parse creates a session that must be closed (caller responsibility) or
   garbage-collected later.
-- Don't auto-import staged docs to Document AI's training dataset. See
-  "Why we stage locally" below.
+- Don't auto-import staged extractor docs to Document AI's training dataset.
+  `train_classifier` / `classify --type` is the separate, intentional path
+  for classifier training examples only. See "Why we stage locally" below.
 - Don't expose `mention_text` on `ParsedField`. Callers want a single
   authoritative `value`; the raw mention is an implementation detail kept
   inside the cached docai.json.
@@ -118,18 +129,23 @@ silently re-pointing to the neighbor.
 
 `close_processing` writes labeled docs to `files/dataset/<doc-type>/`. It
 does NOT call `DocumentService.ImportDocuments` to push them into the
-processor's training dataset.
+extractor processor's training dataset.
 
 Document AI's `ImportDocuments` requires a GCS prefix; the processor's
-managed bucket (`sav-parsers--fpb-mod1`) accepts uploads. So the wiring is
-possible. But every closed session would silently land in the dataset, and
-some manual review is healthy before letting unsupervised labels drift the
-model. `./sav-parsers staged <doc-type>` lists candidates sorted by
-correction count so reviewers can pick the highest-signal ones first;
-upload at your own cadence.
+managed storage makes the wiring possible. But every closed session would
+silently land in the dataset, and some manual review is healthy before
+letting unsupervised labels drift the model. `./sav-parsers staged <doc-type>`
+lists candidates sorted by correction count so reviewers can pick the
+highest-signal ones first; upload at your own cadence.
 
 A `sync` subcommand could automate the upload step later. Skipped for now
 per project preference.
+
+Classifier training is different: `train_classifier` intentionally imports a
+single caller-labeled PDF immediately via a temporary GCS object, then
+deletes that object after the import finishes. That flow is safe here
+because the classifier dataset is Google-managed, so the temp GCS location is
+only an import staging area, not the dataset's source of truth.
 
 ### Only forward user-verified corrections to `close_processing`
 
