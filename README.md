@@ -21,6 +21,7 @@ Create `.env`:
 ```
 DOCAI_PROJECT_ID=<your-gcp-project>
 DOCAI_LOCATION=<eu|us|...>
+DOCAI_EXAME_MEDICO_PROCESSOR_ID=<processor-id>
 DOCAI_FPB_MOD1_PROCESSOR_ID=<processor-id>
 GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
 ```

@@ -1,0 +1,9 @@
+{
+  "doc_type": "exame_medico",
+  "fetched_at": "2026-05-11T21:50:08.736143+00:00",
+  "entities": [
+    "doctor_validation_present",
+    "exam_date"
+  ],
+  "processor_type": "CUSTOM_EXTRACTION_PROCESSOR"
+}
