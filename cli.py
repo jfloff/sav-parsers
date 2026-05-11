@@ -23,8 +23,8 @@ from sav_parsers import (
   gc_processing,
   list_processing,
   list_staged,
-  parse_fpb_mod1,
 )
+from sav_parsers.parsers import classify_and_parse
 from sav_parsers.schema import fetch_schema, load_schema, save_schema
 
 
@@ -33,8 +33,16 @@ def _print_json(obj) -> None:
 
 
 def cmd_parse(args) -> int:
-  result = parse_fpb_mod1(args.pdf)
+  doc_type, result = classify_and_parse(args.pdf)
+  if not result:
+    _print_json({
+      "doc_type": doc_type,
+      "fields": {},
+    })
+    return 0
+
   _print_json({
+    "doc_type": doc_type,
     "processing_id": result["processing_id"],
     "fields":        {k: asdict(v) for k, v in result["fields"].items()},
   })
