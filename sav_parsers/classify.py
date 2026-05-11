@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import sleep
 from urllib.parse import quote
 from uuid import uuid4
 
@@ -48,6 +49,20 @@ def classify(pdf_path: str | Path) -> DocType:
     return DocType.OUTROS
   top = max(document.entities, key=lambda e: e.confidence)
   return _to_doc_type(top.type_)
+
+
+def _wait_for_operation(client, operation) -> dict[str, str]:
+  raw_operation = operation.operation
+  operations_client = client.transport.operations_client
+  while not raw_operation.done:
+    sleep(1)
+    raw_operation = operations_client.get_operation(raw_operation.name)
+  if raw_operation.HasField("error"):
+    raise RuntimeError(
+      f"Document AI import failed [{raw_operation.error.code}]: "
+      f"{raw_operation.error.message}",
+    )
+  return {"operation": raw_operation.name}
 
 
 def train_classifier(pdf_path: str | Path, expected_doc_type: DocType):
@@ -110,7 +125,7 @@ def train_classifier(pdf_path: str | Path, expected_doc_type: DocType):
   # 4. Wait for the long-running import, then delete the temp GCS object.
   import_error = None
   try:
-    return operation.result()
+    return _wait_for_operation(client, operation)
   except Exception as exc:
     import_error = exc
     raise
