@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
 from wordfreq import zipf_frequency
 
 from .document_ai import _processor_id_for, process_document
+from .postprocess import apply_postprocess_to_doc, clean_ocr_text, try_iso_date
 from .processing import start_processing
 from .schema import load_schema
 from .types import ParsedField
@@ -84,30 +84,6 @@ def _recover_word_boundaries(text: str) -> str:
     out.append(" ".join(parts))
   return " ".join(out)
 
-# (regex, indices of year/month/day groups). YYYYMMDD ordered before DDMMYYYY
-# because most date-as-int OCR cases come from machine-printed YYYYMMDD.
-_DATE_PATTERNS: list[tuple[str, tuple[int, int, int]]] = [
-  (r"^(\d{4})[/.\-](\d{2})[/.\-](\d{2})$", (1, 2, 3)),
-  (r"^(\d{2})[/.\-](\d{2})[/.\-](\d{4})$", (3, 2, 1)),
-  (r"^(\d{4})(\d{2})(\d{2})$",             (1, 2, 3)),
-  (r"^(\d{2})(\d{2})(\d{4})$",             (3, 2, 1)),
-]
-
-
-def _try_date(value: str) -> str | None:
-  s = value.strip()
-  for pattern, (yi, mi, di) in _DATE_PATTERNS:
-    m = re.match(pattern, s)
-    if not m:
-      continue
-    y, mo, d = m.group(yi), m.group(mi), m.group(di)
-    try:
-      datetime(int(y), int(mo), int(d))
-      return f"{y}-{mo}-{d}"
-    except ValueError:
-      continue
-  return None
-
 
 def _postprocess_email(value: str) -> str | None:
   cleaned = re.sub(r"\s+", "", value).lower()
@@ -121,8 +97,7 @@ def _postprocess(entity_type: str, value):
 
   Booleans, ints, etc. pass through unchanged. Cleanups that produce a
   substring of the original OCR text (e.g. leading-char strip) can also be
-  applied to the labeled doc by _apply_postprocess_to_doc — see that hook
-  for the label-side update.
+  be applied back to the labeled doc by apply_postprocess_to_doc.
   """
   if not isinstance(value, str):
     return value
@@ -130,9 +105,7 @@ def _postprocess(entity_type: str, value):
   if entity_type in {"email_jogador", "email_encarregado"}:
     return _postprocess_email(value)
 
-  # Generic: strip leading non-alphanumeric + collapse internal whitespace
-  cleaned = re.sub(r"^[^A-Za-zÀ-ÿ0-9]+", "", value)
-  cleaned = re.sub(r"\s+", " ", cleaned).strip()
+  cleaned = clean_ocr_text(value)
   if not cleaned:
     return None
 
@@ -147,51 +120,12 @@ def _postprocess(entity_type: str, value):
     return digits if len(digits) == 9 else cleaned
 
   if entity_type in _DATE_FIELDS:
-    return _try_date(cleaned) or cleaned
+    return try_iso_date(cleaned) or cleaned
 
   if entity_type in _WORD_BOUNDARY_FIELDS:
     return _recover_word_boundaries(cleaned)
 
   return cleaned
-
-
-def _apply_postprocess_to_doc(document) -> list[str]:
-  """Mutate the Document so each entity's textAnchor/mentionText reflect
-  what _postprocess produces, when the cleaned value is locatable inside
-  the original entity span.
-
-  This means the cached docai.json (and any labeled training doc derived
-  from it) already has narrowed labels — no caller-supplied correction
-  needed to teach the retrained model to drop the leading '[' on morada
-  or similar artefacts. Cleanups whose output is not a substring of the
-  original span (whitespace collapse, hyphen insertion, date reformatting)
-  are display-only and don't touch the label.
-
-  Returns the list of entity types whose label was actually patched.
-  """
-  text = document.text
-  changed: list[str] = []
-  for entity in document.entities:
-    original = entity.mention_text or ""
-    cleaned = _postprocess(entity.type_, original)
-    if not isinstance(cleaned, str) or cleaned == original:
-      continue
-    if not entity.text_anchor.text_segments:
-      continue
-    seg = entity.text_anchor.text_segments[0]
-    orig_start = int(seg.start_index) if seg.start_index else 0
-    orig_end   = int(seg.end_index)
-    orig_text  = text[orig_start:orig_end]
-    idx = orig_text.find(cleaned)
-    if idx < 0:
-      continue
-    seg.start_index = orig_start + idx
-    seg.end_index   = seg.start_index + len(cleaned)
-    entity.mention_text = cleaned
-    if entity.normalized_value:
-      entity.normalized_value.Clear()
-    changed.append(entity.type_)
-  return changed
 
 
 def parse_fpb_mod1(pdf_path: str | Path) -> dict:
@@ -212,7 +146,7 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
   pdf_bytes = Path(pdf_path).read_bytes()
   document = process_document(pdf_bytes, processor_id=processor_id)
 
-  auto_corrections = _apply_postprocess_to_doc(document)
+  auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(
     pdf_bytes, "fpb-mod1", document, auto_corrections=auto_corrections,
   )
