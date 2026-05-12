@@ -13,6 +13,13 @@ _DATE_PATTERNS: list[tuple[str, tuple[int, int, int]]] = [
   (r"^(\d{2})(\d{2})(\d{4})$",             (3, 2, 1)),
 ]
 
+TRUE_MARKERS = {
+  "1", "s", "sim", "true", "v", "x", "y", "yes",
+}
+FALSE_MARKERS = {
+  "0", "n", "nao", "não", "false", "no",
+}
+
 
 def try_iso_date(value: str) -> str | None:
   s = value.strip()
@@ -33,6 +40,28 @@ def clean_ocr_text(value: str) -> str | None:
   cleaned = re.sub(r"^[^A-Za-zÀ-ÿ0-9]+", "", value)
   cleaned = re.sub(r"\s+", " ", cleaned).strip()
   return cleaned or None
+
+
+def presence_value(entity, postprocess: Callable[[str, object], object]):
+  nv = entity.normalized_value
+  which = nv._pb.WhichOneof("structured_value")
+  if which == "boolean_value":
+    return nv.boolean_value
+  if which == "signature_value":
+    return True
+
+  raw = postprocess(entity.type_, (nv.text or entity.mention_text or "").strip())
+  if raw is None:
+    return None
+  if isinstance(raw, bool):
+    return raw
+
+  lowered = raw.casefold()
+  if lowered in TRUE_MARKERS:
+    return True
+  if lowered in FALSE_MARKERS:
+    return False
+  return True
 
 
 def apply_postprocess_to_doc(document, postprocess: Callable[[str, object], object]) -> list[str]:
