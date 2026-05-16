@@ -12,6 +12,17 @@ class DocType(StrEnum):
 
 
 @dataclass
+class BBox:
+  """Entity location. `page` is 0-indexed; `vertices` are (x, y) in [0, 1],
+  top-left origin, normalized to the page — multiply by page width/height
+  (PDF points or image pixels) to place overlays.
+  """
+  page: int
+  vertices: list[tuple[float, float]]
+
+
+@dataclass
 class ParsedField:
   value: str | bool | int | None
   confidence: float
+  bbox: BBox | None = None

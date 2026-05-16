@@ -6,6 +6,7 @@ from .document_ai import _processor_id_for, process_document
 from .postprocess import (
   apply_postprocess_to_doc,
   clean_ocr_text,
+  entity_bbox,
   presence_value,
   try_iso_date,
 )
@@ -57,7 +58,7 @@ def parse_em(pdf_path: str | Path) -> dict:
     return _postprocess(entity.type_, (raw or "").strip())
 
   fields = {
-    e.type_: ParsedField(value=_value(e), confidence=e.confidence)
+    e.type_: ParsedField(value=_value(e), confidence=e.confidence, bbox=entity_bbox(e, document))
     for e in document.entities
   }
   for entity_type in load_schema(DocType.EM.value):

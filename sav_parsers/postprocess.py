@@ -4,6 +4,8 @@ import re
 from collections.abc import Callable
 from datetime import datetime
 
+from .types import BBox
+
 # YYYYMMDD stays before DDMMYYYY because most date-as-int OCR cases come
 # from machine-printed YYYYMMDD.
 _DATE_PATTERNS: list[tuple[str, tuple[int, int, int]]] = [
@@ -40,6 +42,25 @@ def clean_ocr_text(value: str) -> str | None:
   cleaned = re.sub(r"^[^A-Za-zÀ-ÿ0-9]+", "", value)
   cleaned = re.sub(r"\s+", " ", cleaned).strip()
   return cleaned or None
+
+
+def entity_bbox(entity, document) -> BBox | None:
+  refs = entity.page_anchor.page_refs
+  if not refs:
+    return None
+  ref = refs[0]
+  page_idx = int(ref.page)
+  poly = ref.bounding_poly
+  if poly.normalized_vertices:
+    vertices = [(v.x, v.y) for v in poly.normalized_vertices]
+  elif poly.vertices and page_idx < len(document.pages):
+    dim = document.pages[page_idx].dimension
+    if not dim.width or not dim.height:
+      return None
+    vertices = [(v.x / dim.width, v.y / dim.height) for v in poly.vertices]
+  else:
+    return None
+  return BBox(page=page_idx, vertices=vertices)
 
 
 def presence_value(entity, postprocess: Callable[[str, object], object]):

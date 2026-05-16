@@ -7,7 +7,7 @@ from pathlib import Path
 from wordfreq import zipf_frequency
 
 from .document_ai import _processor_id_for, process_document
-from .postprocess import apply_postprocess_to_doc, clean_ocr_text, try_iso_date
+from .postprocess import apply_postprocess_to_doc, clean_ocr_text, entity_bbox, try_iso_date
 from .processing import start_processing
 from .schema import load_schema
 from .types import ParsedField
@@ -167,7 +167,7 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
     return _postprocess(entity.type_, (raw or "").strip())
 
   fields = {
-    e.type_: ParsedField(value=_value(e), confidence=e.confidence)
+    e.type_: ParsedField(value=_value(e), confidence=e.confidence, bbox=entity_bbox(e, document))
     for e in document.entities
   }
   for entity_type in load_schema("fpb-mod1"):
