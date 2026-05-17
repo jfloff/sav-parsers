@@ -48,6 +48,8 @@ def entity_bbox(entity, document) -> BBox | None:
   refs = entity.page_anchor.page_refs
   if not refs:
     return None
+  # Form fields are single-page; if a multi-page entity ever appears, only
+  # the first page's box is kept. Return list[BBox] here if that changes.
   ref = refs[0]
   page_idx = int(ref.page)
   poly = ref.bounding_poly
@@ -61,6 +63,35 @@ def entity_bbox(entity, document) -> BBox | None:
   else:
     return None
   return BBox(page=page_idx, vertices=vertices)
+
+
+def extract_value(
+  entity,
+  postprocess: Callable[[str, object], object],
+  *,
+  presence_types: frozenset[str] = frozenset(),
+):
+  """Pull a value out of a DocAI entity, applying parser-specific rules.
+
+  Entities in `presence_types` go through `presence_value` (true/false from
+  marker text or a signature). Everything else falls through DocAI's
+  normalized structured_value when present, otherwise the raw OCR mention is
+  cleaned via `postprocess`.
+  """
+  if entity.type_ in presence_types:
+    return presence_value(entity, postprocess)
+  nv = entity.normalized_value
+  which = nv._pb.WhichOneof("structured_value")
+  if which == "boolean_value":
+    return nv.boolean_value
+  if which == "signature_value":
+    return nv.signature_value
+  if which == "integer_value":
+    return nv.integer_value
+  if which == "date_value":
+    return nv.text
+  raw = nv.text or entity.mention_text
+  return postprocess(entity.type_, (raw or "").strip())
 
 
 def presence_value(entity, postprocess: Callable[[str, object], object]):
@@ -82,6 +113,7 @@ def presence_value(entity, postprocess: Callable[[str, object], object]):
     return True
   if lowered in FALSE_MARKERS:
     return False
+  # Any unrecognized non-empty text counts as present — the field had ink in it.
   return True
 
 
@@ -92,6 +124,10 @@ def apply_postprocess_to_doc(document, postprocess: Callable[[str, object], obje
   cached Document AI response. Cleanups that change the text itself
   (whitespace collapse, hyphen insertion, date reformatting) remain
   display-only.
+
+  `postprocess` must be idempotent: this mutates `mention_text` and clears
+  `normalized_value`, and downstream value extraction re-applies the same
+  callback to the cleaned text.
   """
   text = document.text
   changed: list[str] = []

@@ -7,10 +7,16 @@ from pathlib import Path
 from wordfreq import zipf_frequency
 
 from .document_ai import _processor_id_for, process_document
-from .postprocess import apply_postprocess_to_doc, clean_ocr_text, entity_bbox, try_iso_date
+from .postprocess import (
+  apply_postprocess_to_doc,
+  clean_ocr_text,
+  entity_bbox,
+  extract_value,
+  try_iso_date,
+)
 from .processing import start_processing
 from .schema import load_schema
-from .types import ParsedField
+from .types import DocType, ParsedField
 
 _NINE_DIGIT_FIELDS = {"nif", "telemovel", "telefone", "telefone_encarregado"}
 _DATE_FIELDS       = {"validade_doc", "validade_doc_encarregado", "data_nascimento"}
@@ -142,34 +148,23 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
   OCR text). The processing_id is the handle to a session under
   files/processing/<id>/ holding the original PDF + cleaned DocAI response.
   """
-  processor_id = _processor_id_for("fpb-mod1")
+  processor_id = _processor_id_for(DocType.FPB_MOD1.value)
   pdf_bytes = Path(pdf_path).read_bytes()
   document = process_document(pdf_bytes, processor_id=processor_id)
 
   auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(
-    pdf_bytes, "fpb-mod1", document, auto_corrections=auto_corrections,
+    pdf_bytes, DocType.FPB_MOD1.value, document, auto_corrections=auto_corrections,
   )
 
-  def _value(entity):
-    nv = entity.normalized_value
-    which = nv._pb.WhichOneof("structured_value")
-    if which == "boolean_value":
-      return nv.boolean_value
-    if which == "signature_value":
-      return nv.signature_value
-    if which == "integer_value":
-      return nv.integer_value
-    if which == "date_value":
-      return nv.text  # DocAI already gives ISO YYYY-MM-DD here
-    # Prefer DocAI's normalized text when present, fall back to OCR mention.
-    raw = nv.text or entity.mention_text
-    return _postprocess(entity.type_, (raw or "").strip())
-
   fields = {
-    e.type_: ParsedField(value=_value(e), confidence=e.confidence, bbox=entity_bbox(e, document))
+    e.type_: ParsedField(
+      value=extract_value(e, _postprocess),
+      confidence=e.confidence,
+      bbox=entity_bbox(e, document),
+    )
     for e in document.entities
   }
-  for entity_type in load_schema("fpb-mod1"):
+  for entity_type in load_schema(DocType.FPB_MOD1.value):
     fields.setdefault(entity_type, ParsedField(value=None, confidence=0.0))
   return {"processing_id": processing_id, "fields": fields}

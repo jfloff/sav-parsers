@@ -22,7 +22,7 @@ Create `.env`:
 DOCAI_PROJECT_ID=<your-gcp-project>
 DOCAI_LOCATION=<eu|us|...>
 DOCAI_EXAME_MEDICO_PROCESSOR_ID=<processor-id>
-DOCAI_FPB_MOD1_PROCESSOR_ID=<processor-id>
+DOCAI_FPB_MODELO_1_PROCESSOR_ID=<processor-id>
 GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
 ```
 
@@ -90,11 +90,10 @@ schema in the GCP console (omit `--save` to inspect without writing).
 
 ## Training data
 
-Manual review + upload, for now. Run `./sav-parsers staged fpb-mod1` to list
+Manual review + upload, for now. Run `./sav-parsers staged fpb_modelo_1` to list
 labeled docs sorted by correction count, pick a candidate, upload to the
-processor's GCS bucket (`sav-parsers--fpb-mod1`), and trigger training in the
-Document AI console. See [AGENTS.md](AGENTS.md) for why auto-import is
-intentionally not wired in yet.
+processor's GCS bucket, and trigger training in the Document AI console.
+See [AGENTS.md](AGENTS.md) for why auto-import is intentionally not wired in yet.
 
 ## Acknowledgments
 

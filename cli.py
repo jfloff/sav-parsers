@@ -36,12 +36,13 @@ def _print_json(obj) -> None:
 
 def cmd_parse(args) -> int:
   doc_type, result = classify_and_parse(args.pdf)
-  if not result:
+  if result is None:
     _print_json({
       "doc_type": doc_type,
-      "fields": {},
+      "error":    "unsupported_doc_type",
+      "message":  f"no parser available for doc_type {doc_type.value!r}",
     })
-    return 0
+    return 1
 
   _print_json({
     "doc_type": doc_type,
@@ -68,18 +69,21 @@ def cmd_close(args) -> int:
   corrections: dict[str, str] = {}
   for item in args.correction or []:
     if "=" not in item:
-      print(f"error: --correction must be entity=value, got {item!r}", file=sys.stderr)
+      _print_json({
+        "error":   "bad_correction_format",
+        "message": f"--correction must be entity=value, got {item!r}",
+      })
       return 2
     k, v = item.split("=", 1)
     corrections[k.strip()] = v.strip()
   try:
     result = close_processing(args.processing_id, corrections=corrections or None)
   except FileNotFoundError:
-    print(
-      f"error: no pending processing session {args.processing_id!r}\n"
-      f"       run `./sav-parsers list` to see active sessions",
-      file=sys.stderr,
-    )
+    _print_json({
+      "error":         "unknown_processing_id",
+      "message":       f"no pending processing session {args.processing_id!r}",
+      "processing_id": args.processing_id,
+    })
     return 1
   _print_json(result)
   return 0
@@ -164,7 +168,7 @@ def main() -> int:
     help="List staged labeled docs under files/dataset/<doc-type>/ "
          "(sorted by correction count) — pick one to upload manually.",
   )
-  pst.add_argument("doc_type", help="e.g. fpb-mod1")
+  pst.add_argument("doc_type", help="e.g. fpb_modelo_1")
   pst.set_defaults(func=cmd_staged)
 
   pg = sub.add_parser("gc", help="Delete stale processing sessions")
@@ -176,7 +180,7 @@ def main() -> int:
     help="Fetch processor schema from Document AI; prints to stdout. "
          "Use --save to also write files/schemas/<doc-type>.json.",
   )
-  ps.add_argument("doc_type", help="e.g. fpb-mod1")
+  ps.add_argument("doc_type", help="e.g. fpb_modelo_1")
   ps.add_argument("--save", action="store_true", help="Write to files/schemas/<doc-type>.json (with diff vs cached)")
   ps.set_defaults(func=cmd_schema)
 

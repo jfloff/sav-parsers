@@ -55,9 +55,13 @@ domain logic into this package.
 3. If the entity needs special post-processing (date, 9-digit, email, postal,
    word-boundary recovery), route it in `_postprocess` in `fpb_mod1.py`.
 
-### Add a doc-type (e.g. `fpb-mod4`)
+### Add a doc-type (e.g. `fpb_modelo_4`)
 
-1. Add `DOCAI_FPB_MOD4_PROCESSOR_ID=...` to `.env`.
+The canonical doc-type string is `DocType.<NAME>.value` (e.g. `fpb_modelo_4`).
+That string drives the env-var name, the schema filename, the dataset directory,
+and the `staged` CLI argument — keep them aligned.
+
+1. Add `DOCAI_FPB_MODELO_4_PROCESSOR_ID=...` to `.env`.
 2. Add `FPB_MOD4 = "fpb_modelo_4"` to `DocType` in `types.py` (already there).
 3. Create `sav_parsers/fpb_mod4.py` mirroring `fpb_mod1.py`: a
    `parse_fpb_mod4(pdf_path)` that processes via DocAI, applies
