@@ -1,12 +1,13 @@
 {
   "doc_type": "fpb_modelo_1",
-  "fetched_at": "2026-05-11T09:10:08.471750+00:00",
+  "fetched_at": "2026-05-18T15:54:04.650487+00:00",
   "entities": [
     "apolice_seguro",
     "assinatura_encarregado_presente",
     "assinatura_jogador_presente",
     "associacao",
     "carimbo_clube_presente",
+    "carimbo_clube_region",
     "clube",
     "codigo_postal",
     "companhia_seguro",

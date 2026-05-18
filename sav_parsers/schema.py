@@ -1,10 +1,15 @@
 """Schema cache: snapshot of a Document AI processor's entity list, on disk.
 
 Run `./sav-parsers schema <doc-type>` to refresh the cache from the deployed
-processor version. parse_<doc_type> uses the cache at runtime to ensure every
-schema entity is present in the output (missing ones get value=None,
+processor version. parse_<doc_type> uses the cache at runtime to pad the
+output so every public schema entity is present (missing ones get value=None,
 confidence=0.0). Keeping the snapshot under version control makes schema
 changes visible in code review.
+
+Internal entities — currently anything with a `_region` suffix — are kept in
+the cache (so DocAI processor changes still surface in code review) but are
+folded into their `_presente` sibling by `pair_region_bboxes` and never
+appear in the parser's output.
 """
 from __future__ import annotations
 

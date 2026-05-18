@@ -4,7 +4,7 @@ import re
 from collections.abc import Callable
 from datetime import datetime
 
-from .types import BBox
+from .types import BBox, ParsedField
 
 # YYYYMMDD stays before DDMMYYYY because most date-as-int OCR cases come
 # from machine-printed YYYYMMDD.
@@ -152,3 +152,24 @@ def apply_postprocess_to_doc(document, postprocess: Callable[[str, object], obje
       entity.normalized_value.Clear()
     changed.append(entity.type_)
   return changed
+
+
+def pair_region_bboxes(
+  fields: dict[str, ParsedField],
+  *,
+  region_suffix: str = "_region",
+  presence_suffix: str = "_presente",
+) -> None:
+  """Move each `<base>_region` bbox onto its `<base>{presence_suffix}` sibling.
+
+  DocAI's derived presence entities (e.g. `carimbo_clube_presente`) never
+  carry a page anchor, so the paired `<base>_region` entity exists only to
+  capture the area DocAI inspected. After this step, the presence field
+  carries the region's bbox and the `_region` key is dropped from `fields`.
+  """
+  for region_key in [k for k in fields if k.endswith(region_suffix)]:
+    base = region_key[: -len(region_suffix)]
+    region_field = fields.pop(region_key)
+    presence_key = base + presence_suffix
+    if presence_key in fields:
+      fields[presence_key].bbox = region_field.bbox
