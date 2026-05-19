@@ -167,11 +167,6 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
     for e in document.entities
   }
   for entity_type in load_schema(DocType.FPB_MOD1.value):
-    # `_region` entities are an internal pairing for derived `_presente`
-    # fields — pair_region_bboxes folds them into their sibling and they
-    # never appear in the parser's output.
-    if entity_type.endswith("_region"):
-      continue
     fields.setdefault(entity_type, ParsedField(value=None, confidence=0.0))
   pair_region_bboxes(fields)
   return {"processing_id": processing_id, "fields": fields}
