@@ -171,8 +171,14 @@ def pair_region_bboxes(
     base = region_key[: -len(region_suffix)]
     region_field = fields.pop(region_key)
     presence_key = base + presence_suffix
-    if presence_key in fields:
-      pf = fields[presence_key]
+    pf = fields.get(presence_key)
+    if pf is None:
+      # DocAI inspected the region but emitted no presence entity: create
+      # the presence field as False (uninked) carrying the region's bbox.
+      fields[presence_key] = ParsedField(
+        value=False, confidence=region_field.confidence, bbox=region_field.bbox,
+      )
+    else:
       # If DocAI has a region for this slot but no presence signal, treat
       # the slot as uninked (False) rather than unknown (None).
       if pf.value is None:
