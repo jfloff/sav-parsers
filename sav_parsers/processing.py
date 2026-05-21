@@ -17,6 +17,16 @@ def _processing_dir(processing_id: str) -> Path:
   return PROCESSING_ROOT / processing_id
 
 
+def processing_dir(processing_id: str) -> Path:
+  """Path to a session's working dir (files/processing/<id>/).
+
+  Created by start_processing, removed by close_processing/gc_processing.
+  Callers may drop derived artifacts (e.g. a stamped upload copy) here so they
+  share the session's lifecycle instead of leaking standalone temp files.
+  """
+  return _processing_dir(processing_id)
+
+
 def start_processing(
   pdf_bytes: bytes, doc_type: str, document: documentai.Document,
   *, auto_corrections: list[str] | None = None,
