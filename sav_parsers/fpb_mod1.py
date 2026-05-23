@@ -6,7 +6,7 @@ from pathlib import Path
 
 from wordfreq import zipf_frequency
 
-from .document_ai import _processor_id_for, process_document
+from .document_ai import _processor_id_for, mime_type_for, process_document
 from .postprocess import (
   apply_postprocess_to_doc,
   clean_ocr_text,
@@ -151,7 +151,9 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
   """
   processor_id = _processor_id_for(DocType.FPB_MOD1.value)
   pdf_bytes = Path(pdf_path).read_bytes()
-  document = process_document(pdf_bytes, processor_id=processor_id)
+  document = process_document(
+    pdf_bytes, processor_id=processor_id, mime_type=mime_type_for(pdf_path),
+  )
 
   auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(

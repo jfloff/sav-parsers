@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .document_ai import _processor_id_for, process_document
+from .document_ai import _processor_id_for, mime_type_for, process_document
 from .postprocess import (
   apply_postprocess_to_doc,
   clean_ocr_text,
@@ -34,7 +34,9 @@ def _postprocess(entity_type: str, value):
 def parse_em(pdf_path: str | Path) -> dict:
   processor_id = _processor_id_for(DocType.EM.value)
   pdf_bytes = Path(pdf_path).read_bytes()
-  document = process_document(pdf_bytes, processor_id=processor_id)
+  document = process_document(
+    pdf_bytes, processor_id=processor_id, mime_type=mime_type_for(pdf_path),
+  )
 
   auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(

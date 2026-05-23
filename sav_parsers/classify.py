@@ -10,7 +10,7 @@ from google.api_core.client_options import ClientOptions
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import documentai_v1beta3 as documentai
 
-from .document_ai import _required_env, process_document
+from .document_ai import _required_env, mime_type_for, process_document
 from .types import DocType
 
 
@@ -43,7 +43,9 @@ def classify(pdf_path: str | Path) -> DocType:
   """
   processor_id = _required_env("DOCAI_CLASSIFIER_PROCESSOR_ID")
   pdf_bytes = Path(pdf_path).read_bytes()
-  document = process_document(pdf_bytes, processor_id=processor_id)
+  document = process_document(
+    pdf_bytes, processor_id=processor_id, mime_type=mime_type_for(pdf_path),
+  )
 
   if not document.entities:
     return DocType.OUTROS

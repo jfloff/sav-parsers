@@ -2,12 +2,38 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from dotenv import load_dotenv
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 
 load_dotenv()
+
+# Mime types Document AI accepts for synchronous processing, keyed by extension.
+_MIME_TYPES = {
+  ".pdf": "application/pdf",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+  ".gif": "image/gif",
+  ".bmp": "image/bmp",
+  ".webp": "image/webp",
+}
+
+
+def mime_type_for(path: str | Path) -> str:
+  """Resolve a Document AI mime type from a file extension."""
+  ext = Path(path).suffix.lower()
+  try:
+    return _MIME_TYPES[ext]
+  except KeyError:
+    raise ValueError(
+      f"Unsupported file type {ext or path!r}; "
+      f"expected one of {', '.join(sorted(_MIME_TYPES))}",
+    ) from None
 
 
 def _required_env(name: str) -> str:
@@ -27,16 +53,20 @@ def _client() -> documentai.DocumentProcessorServiceClient:
   )
 
 
-def process_document(pdf_bytes: bytes, processor_id: str) -> documentai.Document:
-  """Send PDF bytes to a Document AI processor; return the parsed Document."""
+def process_document(
+  content: bytes,
+  processor_id: str,
+  mime_type: str = "application/pdf",
+) -> documentai.Document:
+  """Send document bytes to a Document AI processor; return the parsed Document."""
   project_id = _required_env("DOCAI_PROJECT_ID")
   location = _required_env("DOCAI_LOCATION")
   name = f"projects/{project_id}/locations/{location}/processors/{processor_id}"
   request = documentai.ProcessRequest(
     name=name,
     raw_document=documentai.RawDocument(
-      content=pdf_bytes,
-      mime_type="application/pdf",
+      content=content,
+      mime_type=mime_type,
     ),
   )
   return _client().process_document(request=request).document
