@@ -32,7 +32,7 @@ def _postprocess(entity_type: str, value):
 
 
 def parse_em(pdf_path: str | Path) -> dict:
-  processor_id = _processor_id_for(DocType.EM.value)
+  processor_id = _processor_id_for(DocType.EXAME_MEDICO.value)
   pdf_bytes = Path(pdf_path).read_bytes()
   document = process_document(
     pdf_bytes, processor_id=processor_id, mime_type=mime_type_for(pdf_path),
@@ -41,7 +41,7 @@ def parse_em(pdf_path: str | Path) -> dict:
   auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(
     pdf_bytes,
-    DocType.EM.value,
+    DocType.EXAME_MEDICO.value,
     document,
     auto_corrections=auto_corrections,
   )
@@ -54,6 +54,6 @@ def parse_em(pdf_path: str | Path) -> dict:
     )
     for e in document.entities
   }
-  for entity_type in load_schema(DocType.EM.value):
+  for entity_type in load_schema(DocType.EXAME_MEDICO.value):
     fields.setdefault(entity_type, ParsedField(value=None, confidence=0.0))
   return {"processing_id": processing_id, "fields": fields}

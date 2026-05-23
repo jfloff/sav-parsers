@@ -149,7 +149,7 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
   OCR text). The processing_id is the handle to a session under
   files/processing/<id>/ holding the original PDF + cleaned DocAI response.
   """
-  processor_id = _processor_id_for(DocType.FPB_MOD1.value)
+  processor_id = _processor_id_for(DocType.FPB_MODELO_1.value)
   pdf_bytes = Path(pdf_path).read_bytes()
   document = process_document(
     pdf_bytes, processor_id=processor_id, mime_type=mime_type_for(pdf_path),
@@ -157,7 +157,7 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
 
   auto_corrections = apply_postprocess_to_doc(document, _postprocess)
   processing_id = start_processing(
-    pdf_bytes, DocType.FPB_MOD1.value, document, auto_corrections=auto_corrections,
+    pdf_bytes, DocType.FPB_MODELO_1.value, document, auto_corrections=auto_corrections,
   )
 
   fields = {
@@ -168,7 +168,7 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
     )
     for e in document.entities
   }
-  for entity_type in load_schema(DocType.FPB_MOD1.value):
+  for entity_type in load_schema(DocType.FPB_MODELO_1.value):
     fields.setdefault(entity_type, ParsedField(value=None, confidence=0.0))
   pair_region_bboxes(fields)
   return {"processing_id": processing_id, "fields": fields}

@@ -7,11 +7,11 @@ from .em import parse_em
 from .fpb_mod1 import parse_fpb_mod1
 from .types import DocType
 
-# fpb_mod4 is intentionally absent until its parser is implemented; classify
-# can still return DocType.FPB_MOD4, so callers get (FPB_MOD4, None) and decide.
+# fpb_modelo_4 is intentionally absent until its parser is implemented; classify
+# can still return DocType.FPB_MODELO_4, so callers get (FPB_MODELO_4, None) and decide.
 _PARSER_MAP = {
-  DocType.EM:       parse_em,
-  DocType.FPB_MOD1: parse_fpb_mod1,
+  DocType.EXAME_MEDICO: parse_em,
+  DocType.FPB_MODELO_1: parse_fpb_mod1,
 }
 
 
