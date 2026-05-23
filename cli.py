@@ -39,10 +39,10 @@ def cmd_parse(args) -> int:
   if result is None:
     _print_json({
       "doc_type": doc_type,
-      "error":    "unsupported_doc_type",
-      "message":  f"no parser available for doc_type {doc_type.value!r}",
+      "status":   "classified_only",
+      "message":  f"classified as {doc_type.value!r}; no parser available, document was not parsed",
     })
-    return 1
+    return 0
 
   _print_json({
     "doc_type": doc_type,
