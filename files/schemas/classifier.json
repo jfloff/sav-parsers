@@ -1,7 +1,10 @@
 {
   "doc_type": "classifier",
-  "fetched_at": "2026-05-11T09:10:07.387138+00:00",
+  "fetched_at": "2026-05-23T15:02:10.691222+00:00",
   "entities": [
+    "atestado_residencia",
+    "certidao_matricula",
+    "documento_identificacao",
     "exame_medico",
     "fpb_modelo_1",
     "fpb_modelo_4",

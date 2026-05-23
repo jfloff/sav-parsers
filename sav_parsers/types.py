@@ -5,10 +5,13 @@ from enum import StrEnum
 
 
 class DocType(StrEnum):
-  EM       = "exame_medico"
-  FPB_MOD1 = "fpb_modelo_1"
-  FPB_MOD4 = "fpb_modelo_4"
-  OUTROS   = "outros"
+  EM                      = "exame_medico"
+  FPB_MOD1                = "fpb_modelo_1"
+  FPB_MOD4                = "fpb_modelo_4"
+  ATESTADO_RESIDENCIA     = "atestado_residencia"
+  CERTIDAO_MATRICULA      = "certidao_matricula"
+  DOCUMENTO_IDENTIFICACAO = "documento_identificacao"
+  OUTROS                  = "outros"
 
 
 @dataclass
