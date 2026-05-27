@@ -3,6 +3,7 @@
 from .classify import DocType, classify, train_classifier
 from .em import parse_em
 from .fpb_mod1 import parse_fpb_mod1
+from .fpb_mod4 import parse_fpb_mod4
 from .processing import close_processing, gc_processing, list_processing, list_staged, processing_dir
 from .types import ParsedField
 
@@ -12,6 +13,7 @@ __all__ = [
   "train_classifier",
   "parse_em",
   "parse_fpb_mod1",
+  "parse_fpb_mod4",
   "close_processing",
   "list_processing",
   "list_staged",

@@ -1,0 +1,13 @@
+{
+  "doc_type": "fpb_modelo_4",
+  "fetched_at": "2026-05-27T12:05:31.297574+00:00",
+  "entities": [
+    "club_signature_anchor",
+    "club_signature_presente",
+    "escalao_actual",
+    "escalao_subida",
+    "licenca_nr",
+    "nome_jogador"
+  ],
+  "processor_type": "CUSTOM_EXTRACTION_PROCESSOR"
+}

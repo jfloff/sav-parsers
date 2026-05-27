@@ -22,6 +22,11 @@ FALSE_MARKERS = {
   "0", "n", "nao", "não", "false", "no",
 }
 
+# Locator entities (`<base>_region`, `<base>_anchor`) carry only a bbox; their
+# value is folded onto the `<base>_presente` sibling by pair_region_bboxes.
+REGION_SUFFIXES = ("_region", "_anchor")
+PRESENCE_SUFFIX = "_presente"
+
 
 def try_iso_date(value: str) -> str | None:
   s = value.strip()
@@ -154,23 +159,20 @@ def apply_postprocess_to_doc(document, postprocess: Callable[[str, object], obje
   return changed
 
 
-def pair_region_bboxes(
-  fields: dict[str, ParsedField],
-  *,
-  region_suffix: str = "_region",
-  presence_suffix: str = "_presente",
-) -> None:
-  """Move each `<base>_region` bbox onto its `<base>{presence_suffix}` sibling.
+def pair_region_bboxes(fields: dict[str, ParsedField]) -> None:
+  """Move each locator bbox onto its `<base>{PRESENCE_SUFFIX}` sibling.
 
   DocAI's derived presence entities (e.g. `carimbo_clube_presente`) never
-  carry a page anchor, so the paired `<base>_region` entity exists only to
-  capture the area DocAI inspected. After this step, the presence field
-  carries the region's bbox and the `_region` key is dropped from `fields`.
+  carry a page anchor, so the paired locator entity — `<base>_region` or
+  `<base>_anchor` (see REGION_SUFFIXES) — exists only to capture the area
+  DocAI inspected. After this step, the presence field carries the locator's
+  bbox and the locator key is dropped from `fields`.
   """
-  for region_key in [k for k in fields if k.endswith(region_suffix)]:
-    base = region_key[: -len(region_suffix)]
+  for region_key in [k for k in fields if k.endswith(REGION_SUFFIXES)]:
+    suffix = next(s for s in REGION_SUFFIXES if region_key.endswith(s))
+    base = region_key[: -len(suffix)]
     region_field = fields.pop(region_key)
-    presence_key = base + presence_suffix
+    presence_key = base + PRESENCE_SUFFIX
     pf = fields.get(presence_key)
     if pf is None:
       # DocAI inspected the region but emitted no presence entity: create
