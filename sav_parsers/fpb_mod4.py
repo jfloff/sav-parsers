@@ -14,16 +14,21 @@ from .processing import start_processing
 from .schema import load_schema
 from .types import DocType, ParsedField
 
-# club_signature_presente is the inked/uninked signal; club_signature_anchor is
-# its bbox locator (it never carries a presence value). presence_value turns the
-# signal into a true/false, and pair_region_bboxes folds the anchor's bbox onto
-# the _presente sibling — exactly the _region/_presente pairing used in mod1.
-_PRESENCE_FIELDS = frozenset({"club_signature_presente"})
+# Modelo 4 carries two signature slots: the holder's (assinatura_detentor) and
+# the club's (club_signature). Each `_presente` is the inked/uninked signal; the
+# sibling `_anchor` is its bbox locator (it never carries a presence value).
+# presence_value turns the signal into a true/false, and pair_region_bboxes folds
+# the anchor's bbox onto the _presente sibling — exactly the _region/_presente
+# pairing used in mod1.
+_PRESENCE_FIELDS = frozenset({
+  "assinatura_detentor_presente",
+  "club_signature_presente",
+})
 
 
 def _postprocess(entity_type: str, value):
   """Light OCR cleanup. Modelo 4 carries only name/license/tier text plus the
-  signature presence field — no dates, NIFs, or postal codes to normalize."""
+  signature presence fields — no dates, NIFs, or postal codes to normalize."""
   if not isinstance(value, str):
     return value
   return clean_ocr_text(value)
@@ -60,7 +65,8 @@ def parse_fpb_mod4(pdf_path: str | Path) -> dict:
     # to False — None would read as "unknown" instead of "not signed".
     default = False if entity_type in _PRESENCE_FIELDS else None
     fields.setdefault(entity_type, ParsedField(value=default, confidence=0.0))
-  # Folds club_signature_anchor's bbox onto club_signature_presente when the
-  # anchor is present, matching mod1's _region/_presente pairing.
+  # Folds each `<base>_anchor` bbox onto its `<base>_presente` sibling
+  # (assinatura_detentor, club_signature) when the anchor is present, matching
+  # mod1's _region/_presente pairing.
   pair_region_bboxes(fields)
   return {"processing_id": processing_id, "fields": fields}

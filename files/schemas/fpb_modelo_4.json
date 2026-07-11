@@ -1,7 +1,9 @@
 {
   "doc_type": "fpb_modelo_4",
-  "fetched_at": "2026-05-27T12:05:31.297574+00:00",
+  "fetched_at": "2026-07-11T07:21:56.617084+00:00",
   "entities": [
+    "assinatura_detentor_anchor",
+    "assinatura_detentor_presente",
     "club_signature_anchor",
     "club_signature_presente",
     "escalao_actual",
