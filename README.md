@@ -23,8 +23,11 @@ DOCAI_PROJECT_ID=<your-gcp-project>
 DOCAI_LOCATION=<eu|us|...>
 DOCAI_EXAME_MEDICO_PROCESSOR_ID=<processor-id>
 DOCAI_FPB_MODELO_1_PROCESSOR_ID=<processor-id>
-GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
 ```
+
+Auth uses Application Default Credentials — run `gcloud auth application-default
+login` once. To use a service-account key instead, add
+`GOOGLE_APPLICATION_CREDENTIALS=<path-to-key.json>`.
 
 Processor env vars follow the convention `DOCAI_<DOC_TYPE>_PROCESSOR_ID`
 (hyphens become underscores, uppercased). Adding a new doc-type only needs a
