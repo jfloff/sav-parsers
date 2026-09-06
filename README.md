@@ -84,13 +84,18 @@ the user-confirmed truth.
 ## Filesystem
 
 ```
+sav_parsers/
+  schemas/<doc-type>.json    # cached entity list, committed to git + packaged
 files/
-  schemas/<doc-type>.json    # cached entity list, committed to git
   processing/<id>/           # active sessions (gitignored)
   dataset/<doc-type>/        # staged labeled docs (gitignored)
 ```
 
-`schemas/<doc-type>.json` is the source of truth for the entity list at
+The schema cache ships inside the package and is resolved relative to the
+module, so it works from any working directory. `files/` is runtime state and
+stays relative to the process CWD — a library consumer gets its own.
+
+`sav_parsers/schemas/<doc-type>.json` is the source of truth for the entity list at
 runtime — `parse_<doc_type>` always returns one `ParsedField` per name in the
 schema, padding missing entities with `value=None, confidence=0.0`. Refresh
 with `./sav-parsers schema <doc-type> --save` after changing the processor

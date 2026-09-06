@@ -222,8 +222,7 @@ def pair_region_bboxes(
         vertices=slot_from_anchor(region_field.bbox.vertices, pair.slot),
       )
     # The value entity is missing entirely when DocAI read nothing there and
-    # no schema cache was available to pad it in (SCHEMA_DIR is CWD-relative,
-    # so library consumers running outside this repo get no padding).
+    # the doc-type's schema cache does not list it.
     value_field = fields.get(pair.value) if pair.value else None
     inked = value_field is not None and value_field.value is not None
     presence_field = fields.get(pair.presence)

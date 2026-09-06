@@ -178,10 +178,10 @@ def main() -> int:
   ps = sub.add_parser(
     "schema",
     help="Fetch processor schema from Document AI; prints to stdout. "
-         "Use --save to also write files/schemas/<doc-type>.json.",
+         "Use --save to also write the packaged schema cache.",
   )
   ps.add_argument("doc_type", help="e.g. fpb_modelo_1")
-  ps.add_argument("--save", action="store_true", help="Write to files/schemas/<doc-type>.json (with diff vs cached)")
+  ps.add_argument("--save", action="store_true", help="Write to the packaged schema cache (with diff vs cached)")
   ps.set_defaults(func=cmd_schema)
 
   args = p.parse_args()

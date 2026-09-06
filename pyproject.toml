@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sav-parsers"
-version = "0.10.1"
+version = "0.11.0"
 requires-python = ">=3.11"
 dependencies = [
     "google-cloud-documentai>=2.20",
@@ -18,6 +18,9 @@ dev = ["pytest>=8"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["sav_parsers*"]
+
+[tool.setuptools.package-data]
+sav_parsers = ["schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

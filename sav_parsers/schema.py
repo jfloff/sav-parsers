@@ -23,7 +23,9 @@ from google.cloud import documentai_v1beta3 as documentai
 
 from .document_ai import _processor_id_for, _required_env
 
-SCHEMA_DIR = Path("files/schemas")
+# Package-relative, not CWD-relative: library consumers run from their own
+# working directory and must still get the committed entity lists.
+SCHEMA_DIR = Path(__file__).parent / "schemas"
 _CLASSIFIER_PROCESSOR_TYPE = "CUSTOM_CLASSIFICATION_PROCESSOR"
 
 

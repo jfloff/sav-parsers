@@ -31,9 +31,9 @@ sav_parsers/
   processing.py    # start/close/list/gc lifecycle (doc-type agnostic)
   schema.py        # fetch/load/save schema cache
   types.py         # DocType StrEnum + ParsedField dataclass
+  schemas/         # committed schema snapshots (entity lists per doc-type)
 cli.py             # argparse CLI wrapping the package
 sav-parsers        # bash wrapper that calls .venv/bin/python cli.py
-files/schemas/     # committed schema snapshots (entity lists per doc-type)
 ```
 
 ## Caller boundary — do not cross
@@ -54,7 +54,7 @@ choices, not caller domain translation.
 ### Add a schema entity
 
 1. Add the entity in the GCP Document AI console (Schema tab).
-2. `./sav-parsers schema <doc-type> --save` — refreshes `files/schemas/<doc-type>.json`.
+2. `./sav-parsers schema <doc-type> --save` — refreshes `sav_parsers/schemas/<doc-type>.json`.
    (Without `--save`, it just prints the live schema to stdout.) Commit the
    diff so it's visible in code review.
 3. If the entity needs special post-processing (date, 9-digit, email, postal,
