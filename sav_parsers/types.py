@@ -16,9 +16,9 @@ class DocType(StrEnum):
 
 @dataclass
 class BBox:
-  """Entity location. `page` is 0-indexed; `vertices` are (x, y) in [0, 1],
-  top-left origin, normalized to the page — multiply by page width/height
-  (PDF points or image pixels) to place overlays.
+  """Entity location. `page` is 0-indexed; `vertices` are (x, y), top-left
+  origin, normalized to the page as Document AI rendered it. A corrected slot
+  may extend past the page edge.
   """
   page: int
   vertices: list[tuple[float, float]]

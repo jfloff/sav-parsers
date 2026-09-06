@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 from .types import BBox, ParsedField
@@ -21,11 +22,6 @@ TRUE_MARKERS = {
 FALSE_MARKERS = {
   "0", "n", "nao", "não", "false", "no",
 }
-
-# Locator entities (`<base>_region`, `<base>_anchor`) carry only a bbox; their
-# value is folded onto the `<base>_presente` sibling by pair_region_bboxes.
-REGION_SUFFIXES = ("_region", "_anchor")
-PRESENCE_SUFFIX = "_presente"
 
 
 def try_iso_date(value: str) -> str | None:
@@ -154,35 +150,87 @@ def apply_postprocess_to_doc(document, postprocess: Callable[[str, object], obje
     seg.end_index = seg.start_index + len(cleaned)
     entity.mention_text = cleaned
     if entity.normalized_value:
-      entity.normalized_value.Clear()
+      # proto-plus wrappers expose no Clear() — that is the raw protobuf API.
+      # `del` is the idiomatic clear here (equivalent to _pb.ClearField).
+      del entity.normalized_value
     changed.append(entity.type_)
   return changed
 
 
-def pair_region_bboxes(fields: dict[str, ParsedField]) -> None:
-  """Move each locator bbox onto its `<base>{PRESENCE_SUFFIX}` sibling.
+@dataclass(frozen=True)
+class SlotOffset:
+  """Where the writable slot sits relative to the labelled anchor.
 
-  DocAI's derived presence entities (e.g. `carimbo_clube_presente`) never
-  carry a page anchor, so the paired locator entity — `<base>_region` or
-  `<base>_anchor` (see REGION_SUFFIXES) — exists only to capture the area
-  DocAI inspected. After this step, the presence field carries the locator's
-  bbox and the locator key is dropped from `fields`.
+  Units are anchor widths/heights; `right`/`up` move the centre, `width`/
+  `height` scale about it. All-defaults is the identity.
   """
-  for region_key in [k for k in fields if k.endswith(REGION_SUFFIXES)]:
-    suffix = next(s for s in REGION_SUFFIXES if region_key.endswith(s))
-    base = region_key[: -len(suffix)]
-    region_field = fields.pop(region_key)
-    presence_key = base + PRESENCE_SUFFIX
-    pf = fields.get(presence_key)
-    if pf is None:
-      # DocAI inspected the region but emitted no presence entity: create
-      # the presence field as False (uninked) carrying the region's bbox.
-      fields[presence_key] = ParsedField(
-        value=False, confidence=region_field.confidence, bbox=region_field.bbox,
+  right: float = 0.0
+  up: float = 0.0
+  width: float = 1.0
+  height: float = 1.0
+
+
+def slot_from_anchor(
+  vertices: list[tuple[float, float]], offset: SlotOffset,
+) -> list[tuple[float, float]]:
+  min_x = min(x for x, _ in vertices)
+  max_x = max(x for x, _ in vertices)
+  min_y = min(y for _, y in vertices)
+  max_y = max(y for _, y in vertices)
+  aw = max_x - min_x
+  ah = max_y - min_y
+  cx = (min_x + max_x) / 2 + offset.right * aw
+  cy = (min_y + max_y) / 2 - offset.up * ah
+  half_w = aw * offset.width / 2
+  half_h = ah * offset.height / 2
+  return [
+    (cx - half_w, cy - half_h),
+    (cx + half_w, cy - half_h),
+    (cx + half_w, cy + half_h),
+    (cx - half_w, cy + half_h),
+  ]
+
+
+@dataclass(frozen=True)
+class RegionPair:
+  """One locator entity and the presence field its bbox belongs to."""
+  region: str
+  presence: str
+  value: str | None = None
+  slot: SlotOffset = SlotOffset()
+
+
+def pair_region_bboxes(
+  fields: dict[str, ParsedField], pairs: tuple[RegionPair, ...],
+) -> None:
+  """Pair explicit locator entities with presence fields.
+
+  Each locator is removed from `fields`; its bbox is transplanted to the
+  presence field after correcting it to the writable slot rather than keeping
+  the labelled anchor. A real presence value is preserved, while a missing or
+  unknown presence is derived from the configured value entity or defaults to
+  false. Missing locator entities leave their presence fields untouched.
+  """
+  for pair in pairs:
+    region_field = fields.pop(pair.region, None)
+    if region_field is None:
+      continue
+    slot_bbox = None
+    if region_field.bbox is not None:
+      slot_bbox = BBox(
+        page=region_field.bbox.page,
+        vertices=slot_from_anchor(region_field.bbox.vertices, pair.slot),
       )
-    else:
-      # If DocAI has a region for this slot but no presence signal, treat
-      # the slot as uninked (False) rather than unknown (None).
-      if pf.value is None:
-        pf.value = False
-      pf.bbox = region_field.bbox
+    presence_field = fields.get(pair.presence)
+    if presence_field is None:
+      value = fields[pair.value].value is not None if pair.value else False
+      presence_field = ParsedField(
+        value=value, confidence=region_field.confidence, bbox=slot_bbox,
+      )
+      fields[pair.presence] = presence_field
+      continue
+    if presence_field.value is None:
+      presence_field.value = (
+        fields[pair.value].value is not None if pair.value else False
+      )
+    presence_field.bbox = slot_bbox

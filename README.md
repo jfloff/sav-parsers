@@ -43,6 +43,11 @@ A parse run creates a *processing session*. Three phases:
    `{processing_id, fields}` where `fields` is a dict of `entity_name →
    ParsedField(value, confidence)`.
 
+   Presence fields (`*_presente`) carry the corrected writable-slot bbox from
+   their locator entity, while value fields carry the raw ink bbox. This keeps
+   the geometry correction with the parser's own region labelling rather than
+   in the caller.
+
 2. **caller's flow** — the caller does whatever it needs with the fields
    (reconcile against another data source, surface low-confidence values for
    human review, etc.) and may collect user-verified corrections to pass to

@@ -9,6 +9,7 @@ from .postprocess import (
   entity_bbox,
   extract_value,
   pair_region_bboxes,
+  RegionPair,
 )
 from .processing import start_processing
 from .schema import load_schema
@@ -24,6 +25,11 @@ _PRESENCE_FIELDS = frozenset({
   "assinatura_detentor_presente",
   "club_signature_presente",
 })
+
+_REGION_PAIRS = (
+  RegionPair("assinatura_detentor_anchor", "assinatura_detentor_presente"),
+  RegionPair("club_signature_anchor", "club_signature_presente"),
+)
 
 
 def _postprocess(entity_type: str, value):
@@ -65,8 +71,7 @@ def parse_fpb_mod4(pdf_path: str | Path) -> dict:
     # to False — None would read as "unknown" instead of "not signed".
     default = False if entity_type in _PRESENCE_FIELDS else None
     fields.setdefault(entity_type, ParsedField(value=default, confidence=0.0))
-  # Folds each `<base>_anchor` bbox onto its `<base>_presente` sibling
-  # (assinatura_detentor, club_signature) when the anchor is present, matching
-  # mod1's _region/_presente pairing.
-  pair_region_bboxes(fields)
+  # Signature anchors are already on the writable ink slots, so the identity
+  # pairs fold their bboxes onto the presence fields.
+  pair_region_bboxes(fields, _REGION_PAIRS)
   return {"processing_id": processing_id, "fields": fields}

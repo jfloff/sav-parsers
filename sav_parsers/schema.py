@@ -6,10 +6,11 @@ output so every public schema entity is present (missing ones get value=None,
 confidence=0.0). Keeping the snapshot under version control makes schema
 changes visible in code review.
 
-Internal entities — currently anything with a `_region` suffix — are kept in
-the cache (so DocAI processor changes still surface in code review) but are
-folded into their `_presente` sibling by `pair_region_bboxes` and never
-appear in the parser's output.
+Internal locator entities (`_region` and `_anchor`) are kept in the cache (so
+DocAI processor changes still surface in code review) but are folded into
+their paired `_presente` field by `pair_region_bboxes`: the locator entity
+never appears in the parser's output, and its bbox survives on the presence
+field corrected to the writable slot.
 """
 from __future__ import annotations
 

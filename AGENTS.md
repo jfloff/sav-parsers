@@ -44,6 +44,11 @@ domain object, reconciling OCR against a stored profile, deciding what
 to surface for human review) belongs in the caller, not here. Don't grow
 domain logic into this package.
 
+The `*_presente` fields are a geometry exception: their bboxes identify the
+corrected writable slot, while value entities keep the raw ink location. The
+anchor-to-slot calibration lives here because it corrects our own labelling
+choices, not caller domain translation.
+
 ## Common edits
 
 ### Add a schema entity
@@ -54,6 +59,8 @@ domain logic into this package.
    diff so it's visible in code review.
 3. If the entity needs special post-processing (date, 9-digit, email, postal,
    word-boundary recovery), route it in `_postprocess` in `fpb_mod1.py`.
+4. If the entity is a `_region` or `_anchor` locator, register it in that
+   doc-type's `_REGION_PAIRS`; locator entities are no longer paired by suffix.
 
 ### Add a doc-type (e.g. `fpb_modelo_4`)
 

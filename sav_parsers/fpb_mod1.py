@@ -13,6 +13,8 @@ from .postprocess import (
   entity_bbox,
   extract_value,
   pair_region_bboxes,
+  RegionPair,
+  SlotOffset,
   try_iso_date,
 )
 from .processing import start_processing
@@ -42,6 +44,17 @@ _WB_MIN_PART_LEN  = 4
 _WB_MIN_PART_ZIPF = 2.5
 _WB_MAX_TOKEN_ZIPF = 1.5
 _WB_MIN_TOKEN_LEN = 2 * _WB_MIN_PART_LEN
+
+# DocAI anchors on ink, so these regions are labelled on the printed caption,
+# not the blank box beside it — the slot offsets correct for that. Measured on
+# scan 298353636. licenca_fpb has no presence entity in the schema, so the
+# value entity decides whether a number is already written.
+_REGION_PAIRS = (
+  RegionPair("carimbo_clube_region", "carimbo_clube_presente",
+             slot=SlotOffset(up=2.75, width=5.5, height=5.5)),
+  RegionPair("licenca_fpb_region", "licenca_fpb_presente", value="licenca_fpb",
+             slot=SlotOffset(right=1.49, width=1.12, height=1.93)),
+)
 
 
 @lru_cache(maxsize=8192)
@@ -170,5 +183,5 @@ def parse_fpb_mod1(pdf_path: str | Path) -> dict:
   }
   for entity_type in load_schema(DocType.FPB_MODELO_1.value):
     fields.setdefault(entity_type, ParsedField(value=None, confidence=0.0))
-  pair_region_bboxes(fields)
+  pair_region_bboxes(fields, _REGION_PAIRS)
   return {"processing_id": processing_id, "fields": fields}
