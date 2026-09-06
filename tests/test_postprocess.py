@@ -114,6 +114,22 @@ def test_existing_carimbo_presence_value_wins():
   ])
 
 
+def test_absent_value_entity_yields_false_presence():
+  fields = {
+    "licenca_fpb_region": ParsedField(
+      value=None,
+      confidence=0.61,
+      bbox=BBox(page=0, vertices=[(0.1, 0.2), (0.2, 0.3)]),
+    ),
+  }
+
+  pair_region_bboxes(fields, _REGION_PAIRS)
+
+  presence = fields["licenca_fpb_presente"]
+  assert presence.value is False
+  assert presence.bbox is not None
+
+
 def test_missing_region_leaves_presence_untouched():
   presence = ParsedField(
     value=None,

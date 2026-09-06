@@ -221,16 +221,17 @@ def pair_region_bboxes(
         page=region_field.bbox.page,
         vertices=slot_from_anchor(region_field.bbox.vertices, pair.slot),
       )
+    # The value entity is missing entirely when DocAI read nothing there and
+    # no schema cache was available to pad it in (SCHEMA_DIR is CWD-relative,
+    # so library consumers running outside this repo get no padding).
+    value_field = fields.get(pair.value) if pair.value else None
+    inked = value_field is not None and value_field.value is not None
     presence_field = fields.get(pair.presence)
     if presence_field is None:
-      value = fields[pair.value].value is not None if pair.value else False
-      presence_field = ParsedField(
-        value=value, confidence=region_field.confidence, bbox=slot_bbox,
+      fields[pair.presence] = ParsedField(
+        value=inked, confidence=region_field.confidence, bbox=slot_bbox,
       )
-      fields[pair.presence] = presence_field
       continue
     if presence_field.value is None:
-      presence_field.value = (
-        fields[pair.value].value is not None if pair.value else False
-      )
+      presence_field.value = inked
     presence_field.bbox = slot_bbox
